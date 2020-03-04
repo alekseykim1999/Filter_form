@@ -11,29 +11,71 @@ using System.Data.OleDb;
 using System.IO;
 using Microsoft.Office.Interop.Excel;
 using Excel = Microsoft.Office.Interop.Excel;
+using System.Threading;
 
 namespace OurDatabase
 {
     public partial class Form5 : Form
     {
-        public static string connectString = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=Database1.mdb;"; //строка подключения к базе данных
-        private OleDbConnection myConnection; //подключение
-        private OleDbDataAdapter dataadapter; //адаптер для таблицы
-        List<int> codes_of_country = new List<int>(); //коды стран, городов, континентов и певцов. По ним идет обращение к базе
+        public static string connectString = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=Database1.mdb;"; 
+        private OleDbConnection myConnection; 
+        private OleDbDataAdapter dataadapter; 
+        List<int> codes_of_country = new List<int>(); 
         List<int> codes_of_city = new List<int>();
         List<int> codes_of_singer = new List<int>();
         List<int> codes_of_continents = new List<int>();
 
-        int nContinent = 0; // номер выбранного города, страны, континента, певца. Формирует запрос where
+        Mutex mm = new Mutex();
+        
+        string singer_table = "[SingerGroup].[ArtistName],[SingerGroup].[Code_Singer]";
+        string city_table = "[City].[CityName],[City].[Code_City]";
+        string country_table = "[Country].[CountryName],[Country].[Code_Country]";
+        string continent_table = "[Continent].[ContinentName],[Continent].[Code_Continent]";
+
+        string table_query = " FROM [SingerGroup] INNER JOIN " +
+              "([City] INNER JOIN " +
+              "([Country] INNER JOIN [Continent] ON [Continent].[Code_Continent] = [Country].[NumContinent]) ON [Country].[Code_Country] = [City].[NumCountry]) " +
+              "ON [City].[Code_City] = [SingerGroup].[NumCity] ";
+        
+        int nContinent = 0; 
         int nCountry = 0;
         int nCity = 0;
         int nGroup = 0;
-        string sw = ""; //нач строка
+
+        string cc = "";
+        
+        int const_list = 0;
+
+        string sw = ""; 
+    
         public Form5()
         {
             InitializeComponent();
         }
+        private string Regule_One_List(int k)
+        {
+           
+            string uniq_field = "";
+            if(k==1) 
+            {
+                uniq_field += singer_table + "," + city_table + "," + country_table;
+            }
+            else if(k==2) 
+            {
+                uniq_field += singer_table + "," + city_table + "," + continent_table;
+            }
+            else if(k==3) 
+            {
+                uniq_field += singer_table + "," + country_table + "," + continent_table;
+            }
+            else if(k==4) 
+            {
+                uniq_field += city_table + "," + country_table + "," + continent_table;
+            }
+            return uniq_field;
+        }
 
+        
        
 
 
@@ -43,88 +85,126 @@ namespace OurDatabase
 
         }
 
-        private string Function(int nGroup, int nCity, int nCountry, int nContinent)
+
+
+
+        private string Get_Query(int a, int b, int c, int d,int uniq_one)
+        {
+            string field = Regule_One_List(uniq_one); 
+            string sql2 = "SELECT DISTINCT " + field; 
+            sql2 += table_query;
+            string where = Function(a, b, c, d); 
+            sql2 += where;     
+            return sql2;
+        }
+
+
+
+        private string Function(int nGroup,int nCity,int nCountry,int nContinent)
         {
             //функция, формирующая запрос WHERE для установки фильтра
             
             if (nGroup == 0)
             {
-                sw = " WHERE [SingerGroup].[Code_Singer] >0 "; //для правильного создания запроса, если певец не выбран
+                sw = " WHERE [SingerGroup].[Code_Singer] > 0 "; //для правильного создания запроса, если певец не выбран
             }
             else
             {
                 sw = " WHERE [SingerGroup].[Code_Singer] = " + nGroup.ToString(); // вывод тех полей, где номер певца = номеру выбранного 
             }
-
-            if (nCity > 0) //если выбран еще город
-            {
-                sw += " AND [City].[Code_City] = " + nCity.ToString();  // те поля, где город=выбранный город
-            }
-            if (nCountry > 0)
-            {
-                sw += " AND [Country].[Code_Country] = " + nCountry.ToString();
-            }
             if (nContinent > 0)
             {
                 sw += " AND [Continent].[Code_Continent] = " + nContinent.ToString();
             }
+            
+            if (nCountry > 0)
+            {
+                sw += " AND [Country].[Code_Country] = " + nCountry.ToString();
+            }
+            
+            if (nCity > 0) //если выбран еще город
+            {
+                sw += " AND [City].[Code_City] = " + nCity.ToString();  // те поля, где город=выбранный город
+            }
+            
             return sw;
         }
-
-        private void Count_title(List<int> codes_of_singer, int count)
-        {
-            int c = 0;
-            int cc = 0;
-            for (int i = 0; i < count; i++)
-            {
-                string count_songs = "SELECT COUNT([Title]) FROM [Single] WHERE [Single].[NumSingerGroup] = " + codes_of_singer[i].ToString();
-                OleDbCommand songs = new OleDbCommand(count_songs, myConnection);
-                OleDbDataReader read_songs = songs.ExecuteReader();
-                while (read_songs.Read())
-                {
-                    c = Convert.ToInt32(read_songs[0]);
-
-                }
-                read_songs.Close();
-                cc += c;
-            }
-
-            label5.Text = cc.ToString();
-        }
-
-
         private void button4_Click(object sender, EventArgs e)
         {
            
-            string connectData = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=Database1.mdb;"; //подключение
+            string connectData = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=Database1.mdb;"; 
             string sql = "SELECT [Title] as Название,[ArtistName] as Группа,[CityName] as Город, " +
-                "[CountryName] as Страна,[ContinentName] as Континент"; //часть главного запроса для вывода полей
+                "[CountryName] as Страна,[ContinentName] as Континент"; 
 
-            string tables = " FROM [Single],[SingerGroup],[City],[Country],[Continent] "; //с каких таблиц берем данные
+            string tables = " FROM [Single],[SingerGroup],[City],[Country],[Continent] "; 
 
-            string sw = Function(nGroup, nCity, nCountry, nContinent); //получаем условие WHERE из фильтров
+            string sw = Function(nGroup, nCity, nCountry,nContinent); 
             string origin = " AND [SingerGroup].[Code_Singer] = [Single].[NumSingerGroup] AND [City].[Code_City] = [SingerGroup].[NumCity]" +
                 " AND [Country].[Code_Country] = [City].[NumCountry]" +
-                " AND [Country].[NumContinent] = [Continent].[Code_Continent]"; //соединение таблиц для лииквидации дублирования
+                " AND [Country].[NumContinent] = [Continent].[Code_Continent]"; 
             sw += origin;
-            sw += " ORDER BY [Title]"; //сортировка
+            sw += " ORDER BY [Title]"; 
 
             sql += tables + sw;
             myConnection = new OleDbConnection(connectData);
 
             dataadapter = new OleDbDataAdapter(sql, myConnection);
 
-            myConnection.Open(); //создание таблицы 
+            myConnection.Open();  
             DataSet ds = new DataSet();
             dataadapter.Fill(ds);
             table.DataSource = ds.Tables[0];
+
+
             table.ReadOnly = true;
 
-        }
+            int count = table.RowCount-1;
+            label5.Text = count.ToString();
+            if (nGroup > 0)
+            {
+                label6.Text = 1.ToString();
+            }
+            else
+            {
+                label6.Text = MySinger.Items.Count.ToString();
+            }
+            
+            if (nCity > 0)
+            {
+                label7.Text = 1.ToString();
+            }
+            else
+            {
+               
+                label7.Text = MyCity.Items.Count.ToString();
 
+            }
+            if(nCountry > 0)
+            {
+                label8.Text = 1.ToString();
+            }
+            else
+            {
+                label8.Text = comboBox3.Items.Count.ToString();
+                
+            }
+            if (nContinent > 0)
+            {
+                label9.Text = 1.ToString();
+            }
+            else
+            {
+                label9.Text = MyContinent.Items.Count.ToString();
+            }
+
+           
+
+
+        }
+        
         private void Form5_Load(object sender, EventArgs e)
         {
-            //запрос соединения таблиц 
+            
             string connectData = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=Database1.mdb;";
             string sql = "SELECT [Title] as Название,[ArtistName] as Группа,[CityName] as Город,[CountryName] as Страна,[ContinentName] as Континент" +
                " FROM [Single],[SingerGroup],[City],[Country],[Continent]" +
@@ -141,9 +221,26 @@ namespace OurDatabase
             table.ReadOnly = true;
 
 
-            Virtual_Table(); //начальная инициализация комбо_боксов
+            string sql2 = "SELECT DISTINCT " + singer_table + "," + city_table + "," + country_table + "," + continent_table;
+            sql2 += table_query;
+            OleDbCommand combo = new OleDbCommand(sql2, myConnection);
+            OleDbDataReader que_reader_c = combo.ExecuteReader();
+            while (que_reader_c.Read())
+            {
 
-
+                MyContinent.Items.Add(que_reader_c[6].ToString());
+                comboBox3.Items.Add(que_reader_c[4].ToString());
+                MyCity.Items.Add(que_reader_c[2].ToString());
+                MySinger.Items.Add(que_reader_c[0].ToString());
+                codes_of_continents.Add(Convert.ToInt32(que_reader_c[7]));
+                codes_of_country.Add(Convert.ToInt32(que_reader_c[5]));
+                codes_of_city.Add(Convert.ToInt32(que_reader_c[3]));
+                codes_of_singer.Add(Convert.ToInt32(que_reader_c[1]));
+            }
+            que_reader_c.Close();
+            Clear_Info();
+            int count = table.RowCount - 1;
+            label5.Text = count.ToString();
             label6.Text = MySinger.Items.Count.ToString();
             label7.Text = MyCity.Items.Count.ToString();
             label8.Text = comboBox3.Items.Count.ToString();
@@ -151,32 +248,10 @@ namespace OurDatabase
             button4.Enabled = true;
         }
 
-        private void Virtual_Table()
+       
+
+        private void Clear_Info()
         {
-            //виртульная таблица для регулирования комбо_боксов
-            string sql2 = "SELECT [Continent].[ContinentName], [Country].[CountryName],[City].[CityName],[SingerGroup].[ArtistName]," +
-                "[Continent].[Code_Continent],[Country].[Code_Country],[City].[Code_City],[SingerGroup].[Code_Singer] " +
-                "FROM [SingerGroup] INNER JOIN " +
-                "([City] INNER JOIN " +
-                "([Country] INNER JOIN [Continent] ON [Continent].[Code_Continent] = [Country].[NumContinent]) ON [Country].[Code_Country] = [City].[NumCountry]) " +
-                "ON [City].[Code_City] = [SingerGroup].[NumCity] ";
-            sql2 += Function(nGroup, nCity, nCountry, nContinent); //получаем условие WHERE из фильтров
-            OleDbCommand combo = new OleDbCommand(sql2, myConnection);
-            OleDbDataReader que_reader_c = combo.ExecuteReader();
-            while (que_reader_c.Read())
-            {
-
-                MyContinent.Items.Add(que_reader_c[0].ToString());
-                comboBox3.Items.Add(que_reader_c[1].ToString());
-                MyCity.Items.Add(que_reader_c[2].ToString());
-                MySinger.Items.Add(que_reader_c[3].ToString());
-                codes_of_continents.Add(Convert.ToInt32(que_reader_c[4]));
-                codes_of_country.Add(Convert.ToInt32(que_reader_c[5]));
-                codes_of_city.Add(Convert.ToInt32(que_reader_c[6]));
-                codes_of_singer.Add(Convert.ToInt32(que_reader_c[7]));
-            }
-            que_reader_c.Close();
-
             //убрать дубли в комбо боксах
             object[] items1 = MyContinent.Items.OfType<String>().Distinct().ToArray();
             MyContinent.Items.Clear();
@@ -214,41 +289,286 @@ namespace OurDatabase
         }
         private void comboBox3_SelectedIndexChanged(object sender, EventArgs e)
         {
+            
+           
             nCountry = codes_of_country[comboBox3.SelectedIndex];
-            Virtual_Table();
+            const_list = 2;
+            string query = Get_Query(nGroup, nCity, nCountry, nContinent, const_list);
+            Changing_Combo_Box(query, const_list);
+
+           
+           
+
            
         }
 
         private void MyContinent_SelectedIndexChanged(object sender, EventArgs e)
         {
+            
+            
             nContinent = codes_of_continents[MyContinent.SelectedIndex];
+            const_list = 1;
+            string query = Get_Query(nGroup, nCity, nCountry, nContinent, const_list);
+            Changing_Combo_Box(query, const_list);
            
-           
-
         }
 
         private void MyCity_SelectedIndexChanged(object sender, EventArgs e)
         {
+
+            
             nCity = codes_of_city[MyCity.SelectedIndex];
+            const_list = 3;
+            string query = Get_Query(nGroup, nCity, nCountry, nContinent, const_list);
+            Changing_Combo_Box(query, const_list);
+            
+
+           
+
         }
 
         private void table_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
 
         }
-
-
-        private void MySinger_Click(object sender, EventArgs e)
+        private void Changing_Combo_Box(string query_for_change,int this_list)
         {
+            if(this_list==1) 
+            {
+                
+                OleDbCommand combo = new OleDbCommand(query_for_change, myConnection);
+                OleDbDataReader que_reader_c = combo.ExecuteReader();
 
+                List<string> item = new List<string>();
+                List<int> h_item = new List<int>();
+
+                List<string> item1 = new List<string>();
+                List<int> h_item1= new List<int>();
+
+                List<string> item2 = new List<string>();
+                List<int> h_item2 = new List<int>();
+
+                MySinger.Items.Clear();
+                MyCity.Items.Clear();
+                comboBox3.Items.Clear();
+
+                codes_of_singer.Clear();
+                codes_of_city.Clear();
+                codes_of_country.Clear();
+                while (que_reader_c.Read())
+                {
+                    item.Add(que_reader_c[4].ToString());
+                    h_item.Add(Convert.ToInt32(que_reader_c[5]));
+                    item1.Add(que_reader_c[2].ToString());
+                    h_item1.Add(Convert.ToInt32(que_reader_c[3]));
+                    item2.Add(que_reader_c[0].ToString());
+                    h_item2.Add(Convert.ToInt32(que_reader_c[1]));
+
+                   
+                }
+                que_reader_c.Close();
+
+                object[] country = item.OfType<string>().Distinct().ToArray();
+                comboBox3.Items.AddRange(country);
+
+                int[] country_code = h_item.OfType<int>().Distinct().ToArray();
+                codes_of_country.AddRange(country_code);
+
+                object[] city = item1.OfType<string>().Distinct().ToArray();
+                MyCity.Items.AddRange(city);
+
+                int[] city_code = h_item1.OfType<int>().Distinct().ToArray();
+                codes_of_city.AddRange(city_code);
+
+                object[] singer = item2.OfType<string>().Distinct().ToArray();
+                MySinger.Items.AddRange(singer);
+
+                int[] singer_code = h_item2.OfType<int>().Distinct().ToArray();
+                codes_of_singer.AddRange(singer_code);
+
+               
+
+            }
+            if (this_list == 2) 
+            {
+                
+                OleDbCommand combo = new OleDbCommand(query_for_change, myConnection);
+                OleDbDataReader que_reader_c = combo.ExecuteReader();
+
+                List<string> item = new List<string>();
+                List<int> h_item = new List<int>();
+
+                List<string> item1 = new List<string>();
+                List<int> h_item1 = new List<int>();
+
+                List<string> item2 = new List<string>();
+                List<int> h_item2 = new List<int>();
+
+
+
+                MySinger.Items.Clear();
+                MyCity.Items.Clear();
+                MyContinent.Items.Clear();
+
+                codes_of_singer.Clear();
+                codes_of_city.Clear();
+                codes_of_continents.Clear();
+                while (que_reader_c.Read())
+                {
+                    item.Add(que_reader_c[4].ToString());
+                    h_item.Add(Convert.ToInt32(que_reader_c[5]));
+                    item1.Add(que_reader_c[2].ToString());
+                    h_item1.Add(Convert.ToInt32(que_reader_c[3]));
+                    item2.Add(que_reader_c[0].ToString());
+                    h_item2.Add(Convert.ToInt32(que_reader_c[1]));
+
+
+                   
+                }
+                que_reader_c.Close();
+
+                object[] continents = item.OfType<string>().Distinct().ToArray();
+                MyContinent.Items.AddRange(continents);
+
+                int[] cont_code = h_item.OfType<int>().Distinct().ToArray();
+                codes_of_continents.AddRange(cont_code);
+
+                object[] city = item1.OfType<string>().Distinct().ToArray();
+                MyCity.Items.AddRange(city);
+
+                int[] city_code = h_item1.OfType<int>().Distinct().ToArray();
+                codes_of_city.AddRange(city_code);
+
+                object[] singer = item2.OfType<string>().Distinct().ToArray();
+                MySinger.Items.AddRange(singer);
+
+                int[] singer_code = h_item2.OfType<int>().Distinct().ToArray();
+                codes_of_singer.AddRange(singer_code);
+
+                
+
+            }
+            if (this_list == 3) 
+            {
+                
+                OleDbCommand combo = new OleDbCommand(query_for_change, myConnection);
+                OleDbDataReader que_reader_c = combo.ExecuteReader();
+
+                List<string> item = new List<string>();
+                List<int> h_item = new List<int>();
+
+                List<string> item1 = new List<string>();
+                List<int> h_item1 = new List<int>();
+
+                List<string> item2 = new List<string>();
+                List<int> h_item2 = new List<int>();
+
+                MySinger.Items.Clear();
+                MyContinent.Items.Clear();
+                comboBox3.Items.Clear();
+
+                codes_of_singer.Clear();
+                codes_of_continents.Clear();
+                codes_of_country.Clear();
+                while (que_reader_c.Read())
+                {
+                    item.Add(que_reader_c[4].ToString());
+                    h_item.Add(Convert.ToInt32(que_reader_c[5]));
+                    item1.Add(que_reader_c[2].ToString());
+                    h_item1.Add(Convert.ToInt32(que_reader_c[3]));
+                    item2.Add(que_reader_c[0].ToString());
+                    h_item2.Add(Convert.ToInt32(que_reader_c[1]));
+
+
+                   
+                }
+                que_reader_c.Close();
+
+                object[] continents = item.OfType<string>().Distinct().ToArray();
+                MyContinent.Items.AddRange(continents);
+
+                int[] cont_code = h_item.OfType<int>().Distinct().ToArray();
+                codes_of_continents.AddRange(cont_code);
+
+                object[] country = item1.OfType<string>().Distinct().ToArray();
+                comboBox3.Items.AddRange(country);
+
+                int[] country_code = h_item1.OfType<int>().Distinct().ToArray();
+                codes_of_country.AddRange(country_code);
+
+                object[] singer = item2.OfType<string>().Distinct().ToArray();
+                MySinger.Items.AddRange(singer);
+
+                int[] singer_code = h_item2.OfType<int>().Distinct().ToArray();
+                codes_of_singer.AddRange(singer_code);
+
+                
+            }
+            if (this_list == 4) 
+            {
+                OleDbCommand combo = new OleDbCommand(query_for_change, myConnection);
+                OleDbDataReader que_reader_c = combo.ExecuteReader();
+
+                List<string> item = new List<string>();
+                List<int> h_item = new List<int>();
+
+                List<string> item1 = new List<string>();
+                List<int> h_item1 = new List<int>();
+
+                List<string> item2 = new List<string>();
+                List<int> h_item2 = new List<int>();
+
+
+                MyContinent.Items.Clear();
+                MyCity.Items.Clear();
+                comboBox3.Items.Clear();
+
+                codes_of_continents.Clear();
+                codes_of_city.Clear();
+                codes_of_country.Clear();
+                while (que_reader_c.Read())
+                {
+                    item.Add(que_reader_c[4].ToString());
+                    h_item.Add(Convert.ToInt32(que_reader_c[5]));
+                    item1.Add(que_reader_c[2].ToString());
+                    h_item1.Add(Convert.ToInt32(que_reader_c[3]));
+                    item2.Add(que_reader_c[0].ToString());
+                    h_item2.Add(Convert.ToInt32(que_reader_c[1]));
+
+
+                   
+                }
+                que_reader_c.Close();
+
+                object[] continents = item.OfType<string>().Distinct().ToArray();
+                MyContinent.Items.AddRange(continents);
+
+                int[] cont_code = h_item.OfType<int>().Distinct().ToArray();
+                codes_of_continents.AddRange(cont_code);
+
+                object[] country = item1.OfType<string>().Distinct().ToArray();
+                comboBox3.Items.AddRange(country);
+
+                int[] country_code = h_item1.OfType<int>().Distinct().ToArray();
+                codes_of_country.AddRange(country_code);
+
+                object[] city = item2.OfType<string>().Distinct().ToArray();
+                MyCity.Items.AddRange(city);
+
+                int[] city_code = h_item2.OfType<int>().Distinct().ToArray();
+                codes_of_city.AddRange(city_code);
+
+
+               
+            }   
         }
-
         private void MySinger_SelectedIndexChanged_1(object sender, EventArgs e)
         {
-
-           
+            
             nGroup = codes_of_singer[MySinger.SelectedIndex];
-
+            const_list = 4;
+            string query = Get_Query(nGroup, nCity, nCountry, nContinent, const_list);
+            Changing_Combo_Box(query, const_list);
 
         }
 
@@ -275,19 +595,38 @@ namespace OurDatabase
             nCountry = 0;
             nCity = 0;
             nGroup = 0;
-           
-
-
             myConnection = new OleDbConnection(connectString);
             myConnection.Open();
 
-        }
+            string sql2 = "SELECT " + singer_table + "," + city_table + "," + country_table + "," + continent_table;
+            sql2 += table_query;
+            OleDbCommand combo = new OleDbCommand(sql2, myConnection);
+            OleDbDataReader que_reader_c = combo.ExecuteReader();
+            while (que_reader_c.Read())
+            {
 
+                MyContinent.Items.Add(que_reader_c[6].ToString());
+                comboBox3.Items.Add(que_reader_c[4].ToString());
+                MyCity.Items.Add(que_reader_c[2].ToString());
+                MySinger.Items.Add(que_reader_c[0].ToString());
+                codes_of_continents.Add(Convert.ToInt32(que_reader_c[7]));
+                codes_of_country.Add(Convert.ToInt32(que_reader_c[5]));
+                codes_of_city.Add(Convert.ToInt32(que_reader_c[3]));
+                codes_of_singer.Add(Convert.ToInt32(que_reader_c[1]));
+            }
+            que_reader_c.Close();
+            Clear_Info();
+            label5.Text = table.RowCount.ToString();
+            label6.Text = MySinger.Items.Count.ToString();
+            label7.Text = MyCity.Items.Count.ToString();
+            label8.Text = comboBox3.Items.Count.ToString();
+            label9.Text = MyContinent.Items.Count.ToString();
+            button4.Enabled = true;
+        }
         private void groupBox1_Enter(object sender, EventArgs e)
         {
 
         }
-
         private void button2_Click(object sender, EventArgs e)
         {
             ExportToExcel();
@@ -327,7 +666,7 @@ namespace OurDatabase
                 {
                     for (int j = 0; j <table.Columns.Count; j++)
                     {
-                        // Excel index starts from 1,1. As first Row would have the Column headers, adding a condition check.
+                        
                         if (cellRowIndex == 1)
                         {
                             worksheet.Cells[cellRowIndex, cellColumnIndex] = table.Columns[j].HeaderText;
@@ -362,6 +701,11 @@ namespace OurDatabase
                 workbook = null;
                 excel = null;
             }
+        }
+
+        private void MyContinent_TextChanged(object sender, EventArgs e)
+        {
+            
         }
     }
 }

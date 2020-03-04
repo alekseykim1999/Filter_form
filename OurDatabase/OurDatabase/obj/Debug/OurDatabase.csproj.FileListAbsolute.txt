@@ -124,3 +124,14 @@ D:\Институт\Искусственный интеллект\БД (рабо
 D:\Институт\Искусственный интеллект\БД (рабочий проект)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.csproj.CoreCompileInputs.cache
 D:\Институт\Искусственный интеллект\БД (рабочий проект)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.exe
 D:\Институт\Искусственный интеллект\БД (рабочий проект)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.pdb
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\bin\Debug\OurDatabase.exe.config
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\bin\Debug\OurDatabase.exe
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\bin\Debug\OurDatabase.pdb
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.csprojAssemblyReference.cache
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.csproj.ResolveComReference.cache
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.Form5.resources
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.Properties.Resources.resources
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.csproj.GenerateResource.cache
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.csproj.CoreCompileInputs.cache
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.exe
+D:\Институт\Искусственный интеллект\БД(окончательная версия)\OurDatabase\OurDatabase\obj\Debug\OurDatabase.pdb

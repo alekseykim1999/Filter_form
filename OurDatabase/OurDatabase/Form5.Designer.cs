@@ -110,17 +110,16 @@
             // 
             // MyContinent
             // 
-            this.MyContinent.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.MyContinent.FormattingEnabled = true;
             this.MyContinent.Location = new System.Drawing.Point(0, 60);
             this.MyContinent.Name = "MyContinent";
             this.MyContinent.Size = new System.Drawing.Size(121, 24);
             this.MyContinent.TabIndex = 8;
             this.MyContinent.SelectedIndexChanged += new System.EventHandler(this.MyContinent_SelectedIndexChanged);
+            this.MyContinent.TextChanged += new System.EventHandler(this.MyContinent_TextChanged);
             // 
             // comboBox3
             // 
-            this.comboBox3.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox3.FormattingEnabled = true;
             this.comboBox3.Location = new System.Drawing.Point(156, 60);
             this.comboBox3.Name = "comboBox3";
@@ -130,7 +129,6 @@
             // 
             // MyCity
             // 
-            this.MyCity.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.MyCity.FormattingEnabled = true;
             this.MyCity.Location = new System.Drawing.Point(309, 60);
             this.MyCity.Name = "MyCity";
@@ -140,14 +138,12 @@
             // 
             // MySinger
             // 
-            this.MySinger.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.MySinger.FormattingEnabled = true;
             this.MySinger.Location = new System.Drawing.Point(466, 60);
             this.MySinger.Name = "MySinger";
             this.MySinger.Size = new System.Drawing.Size(121, 24);
             this.MySinger.TabIndex = 5;
             this.MySinger.SelectedIndexChanged += new System.EventHandler(this.MySinger_SelectedIndexChanged_1);
-            this.MySinger.Click += new System.EventHandler(this.MySinger_Click);
             // 
             // label4
             // 
@@ -246,7 +242,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(838, 558);
+            this.ClientSize = new System.Drawing.Size(838, 610);
             this.Controls.Add(this.label9);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label7);
